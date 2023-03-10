@@ -1,10 +1,12 @@
 import sequelize from '../db'
 import { DataTypes, Model } from 'sequelize'
 
-class User extends Model {}
-class Post extends Model {}
-class Comment extends Model {}
-
+class User extends Model {
+  declare id: string
+  declare password: string
+  declare email: string
+  declare userName: string
+}
 User.init(
   {
     id: {
@@ -30,6 +32,12 @@ User.init(
   { sequelize, modelName: 'User' }
 )
 
+class Post extends Model {
+  declare id: string
+  declare content: JSON
+  declare likes: number
+  declare dislikes: number
+}
 Post.init(
   {
     id: {
@@ -50,6 +58,12 @@ Post.init(
   { sequelize, modelName: 'Post' }
 )
 
+class Comment extends Model {
+  declare id: string
+  declare content: string
+  declare likes: number
+  declare dislikes: number
+}
 Comment.init(
   {
     id: {
