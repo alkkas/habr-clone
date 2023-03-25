@@ -1,13 +1,13 @@
-import { Response, Request } from 'express'
 import { User } from '@models/models'
 import bcrypt from 'bcrypt'
+import { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import getTokens from '../utils/getTokens'
 
 class UserController {
   async registration(req: Request, res: Response) {
     try {
-      const user = User.create({
+      const user = await User.create({
         userName: req.body.userName,
         email: req.body.email,
         password: bcrypt.hashSync(req.body.password, 10),
@@ -15,6 +15,7 @@ class UserController {
       const userData = {
         userName: req.body.userName,
         email: req.body.email,
+        id: user.id,
       }
       const [token, refreshToken] = getTokens(userData)
 
@@ -23,10 +24,10 @@ class UserController {
         token,
         refreshToken,
       }
-      res.status(200).json(response)
+      return res.status(200).json(response)
     } catch (e) {
       console.log(e)
-      res.status(500).json({ message: 'error while registering user' })
+      return res.status(500).json({ message: 'error while registering user' })
     }
   }
   async login(req: Request, res: Response) {
@@ -40,30 +41,21 @@ class UserController {
         message: 'Invalid Password!',
       })
     }
-    const [token, refreshToken] = getTokens({ is: user.id })
+    const [token, refreshToken] = getTokens({
+      id: user.id,
+      email: req.body.email,
+    })
     const response = {
       status: 'logged In',
       token,
       refreshToken,
     }
+
     res.status(200).json(response)
   }
   async auth(req: Request, res: Response) {
-    let token = req.headers['Authorization']
-
-    if (token && !(token instanceof Array)) {
-      token = token.split(' ').at(-1) as string
-      jwt.verify(token, process.env.TOKEN_SECRET as string, (err, decoded) => {
-        if (err) {
-          return res.status(401).json({ message: 'Unauthorized access.' })
-        }
-        return res.status(200).json({ decoded })
-      })
-    }
-
-    return res.status(403).send({
-      message: 'No token provided.',
-    })
+    const decoded = req.body.decoded
+    return res.status(200).json({ decoded })
   }
   async refreshToken(req: Request, res: Response) {
     const token: string | undefined = req.body.token

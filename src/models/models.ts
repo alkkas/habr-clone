@@ -1,5 +1,5 @@
-import sequelize from '../db'
 import { DataTypes, Model } from 'sequelize'
+import sequelize from '../db'
 
 class User extends Model {
   declare id: string
@@ -45,6 +45,9 @@ Post.init(
       autoIncrement: true,
       primaryKey: true,
     },
+    title: {
+      type: DataTypes.STRING,
+    },
     content: {
       type: DataTypes.JSON,
     },
@@ -85,11 +88,24 @@ Comment.init(
   { sequelize, modelName: 'Comment' }
 )
 
+const Likes = sequelize.define('Likes', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+  isLike: {
+    type: DataTypes.BOOLEAN,
+  },
+})
+
 User.hasMany(Post)
+User.hasMany(Likes)
 Post.belongsTo(User)
 
 Post.hasMany(Comment)
+Post.hasMany(Likes)
 Comment.belongsTo(Post)
 
-export default { User, Post, Comment }
-export { User, Post, Comment }
+export default { User, Post, Comment, Likes }
+export { User, Post, Comment, Likes }

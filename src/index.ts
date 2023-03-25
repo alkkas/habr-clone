@@ -1,10 +1,11 @@
 require('dotenv').config()
-import cors from 'cors'
-import express from 'express'
-import dotenv from 'dotenv'
-import sequelize from './db.js'
+import handleUnknownError from '@middlewares/errorHandler.js'
 import router from '@routes/index'
-import models from '@models/models'
+import 'core-js/stable'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import express from 'express'
+import sequelize from './db.js'
 
 dotenv.config()
 
@@ -13,6 +14,7 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 app.use('/api', router)
+app.use(handleUnknownError)
 
 const port = process.env.PORT ?? 5000
 
@@ -21,9 +23,8 @@ const start = async () => {
     await sequelize.authenticate()
     await sequelize.sync()
     app.get('/', (req, res) => {
-      res.send('server started')
+      res.send('server startasdfased')
     })
-
     app.listen(port, () => {
       console.log(`server running on port ${port}`)
     })
