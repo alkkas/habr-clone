@@ -21,7 +21,7 @@ const port = process.env.PORT ?? 5000
 const start = async () => {
   try {
     await sequelize.authenticate()
-    await sequelize.sync()
+    await sequelize.sync({ force: false })
     app.get('/', (req, res) => {
       res.send('server startasdfased')
     })

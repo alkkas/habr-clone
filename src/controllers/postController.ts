@@ -1,4 +1,4 @@
-import { Likes, Post } from '@models/models'
+import { Like, Post, Comment } from '@models/models'
 import { Request, Response } from 'express'
 
 class PostController {
@@ -7,8 +7,8 @@ class PostController {
       await Post.create({
         title: req.body.title,
         content: req.body.content,
-        likes: 0,
-        dislikes: 0,
+        likesCount: 0,
+        dislikesCount: 0,
         UserId: req.body.decoded.id,
       })
       return res.status(200).json({ message: 'success' })
@@ -49,7 +49,18 @@ class PostController {
     }
   }
   async changePost(req: Request, res: Response) {
-    return res.status(200)
+    if (req.body && req.params.id) {
+      const values: any = {}
+      for (const key in req.body) {
+        if (key !== 'decoded') {
+          values[key] = req.body[key]
+        }
+      }
+      await Post.update({ ...values }, { where: { id: req.params.id } })
+    } else {
+      return res.status(400).json({ message: 'PostId not specified' })
+    }
+    return res.status(200).json({ message: 'success' })
   }
   async deletePost(req: Request, res: Response) {
     try {
@@ -62,6 +73,7 @@ class PostController {
           await Post.destroy({
             where: { id: req.params.id },
           })
+          await Comment.destroy({ where: { PostId: +req.params.id } })
           return res.status(200).json({ message: 'success' })
         } else {
           return res.status(403).json({
@@ -80,13 +92,51 @@ class PostController {
       const UserId = req.body.decoded.id
       const { isLike, PostId } = req.body
       if (isLike !== undefined && PostId) {
-        const like = await Likes.findOne({ where: { UserId, PostId } })
-        if (like) {
-          Likes.update({ isLike }, { where: { UserId, PostId } })
+        const post = await Post.findOne({ where: { id: PostId } })
+        if (post) {
+          let likes = await post.getLikes({ where: { UserId } })
+
+          if (likes?.length === 1) {
+            const like = likes[0]
+            console.log(like)
+            await Like.update({ isLike }, { where: { UserId, PostId } })
+            if (isLike && !like.isLike) {
+              await Post.update(
+                {
+                  likesCount: post.likesCount + 1,
+                  dislikesCount: post.dislikesCount - 1,
+                },
+                { where: { id: PostId } }
+              )
+            } else if (!isLike && like.isLike) {
+              await Post.update(
+                {
+                  likesCount: post.likesCount - 1,
+                  dislikesCount: post.dislikesCount + 1,
+                },
+                { where: { id: PostId } }
+              )
+            }
+          } else {
+            await post.createLike({ UserId, isLike })
+            if (isLike) {
+              await Post.update(
+                { likesCount: post.likesCount + 1 },
+                { where: { id: PostId } }
+              )
+            } else {
+              await Post.update(
+                { dislikesCount: post.dislikesCount + 1 },
+                { where: { id: PostId } }
+              )
+            }
+          }
+          return res.status(200).json({ message: 'success' })
         } else {
-          await Likes.create({ UserId, PostId, isLike })
+          return res
+            .status(400)
+            .json({ message: `post with id ${PostId} not found` })
         }
-        return res.status(200).json({ message: 'success' })
       } else {
         return res
           .status(400)

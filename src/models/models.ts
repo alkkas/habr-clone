@@ -1,4 +1,10 @@
-import { DataTypes, Model } from 'sequelize'
+import {
+  DataTypes,
+  Model,
+  HasManyGetAssociationsMixin,
+  HasManyAddAssociationMixin,
+  HasManyCreateAssociationMixin,
+} from 'sequelize'
 import sequelize from '../db'
 
 class User extends Model {
@@ -35,8 +41,12 @@ User.init(
 class Post extends Model {
   declare id: string
   declare content: JSON
-  declare likes: number
-  declare dislikes: number
+  declare likesCount: number
+  declare dislikesCount: number
+
+  declare addLike: HasManyAddAssociationMixin<Like, number>
+  declare getLikes: HasManyGetAssociationsMixin<Like>
+  declare createLike: HasManyCreateAssociationMixin<Like, 'UserId'>
 }
 Post.init(
   {
@@ -51,10 +61,10 @@ Post.init(
     content: {
       type: DataTypes.JSON,
     },
-    likes: {
+    likesCount: {
       type: DataTypes.INTEGER,
     },
-    dislikes: {
+    dislikesCount: {
       type: DataTypes.INTEGER,
     },
   },
@@ -78,34 +88,80 @@ Comment.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    likes: {
+    likesCount: {
       type: DataTypes.INTEGER,
     },
-    dislikes: {
+    dislikesCount: {
       type: DataTypes.INTEGER,
     },
   },
   { sequelize, modelName: 'Comment' }
 )
+const uppercaseFirst = (str: string) =>
+  `${str[0].toUpperCase()}${str.substr(1)}`
 
-const Likes = sequelize.define('Likes', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
+class Like extends Model {
+  declare isLike: boolean
+  declare likeType: string
+  declare likeId: number
+  declare UserId: number;
+  [i: string]: any
+  getLikes(options: any) {
+    if (!this.likeType) return Promise.resolve(null)
+    const mixinMethodName = `get${uppercaseFirst(this.likeType)}`
+    return this[mixinMethodName](options)
+  }
+}
+Like.init(
+  {
+    isLike: DataTypes.BOOLEAN,
+    likeType: DataTypes.STRING,
+    likeId: DataTypes.INTEGER,
   },
-  isLike: {
-    type: DataTypes.BOOLEAN,
-  },
-})
+  { sequelize, modelName: 'likes' }
+)
 
 User.hasMany(Post)
-User.hasMany(Likes)
 Post.belongsTo(User)
+Comment.belongsTo(User)
+User.hasMany(Like)
 
 Post.hasMany(Comment)
-Post.hasMany(Likes)
 Comment.belongsTo(Post)
+Post.hasMany(Like, {
+  foreignKey: 'PostId',
+  constraints: false,
+  scope: { likeType: 'post' },
+})
+Like.belongsTo(Post, { foreignKey: 'PostId', constraints: false })
 
-export default { User, Post, Comment, Likes }
-export { User, Post, Comment, Likes }
+Comment.hasMany(Like, {
+  foreignKey: 'CommentId',
+  constraints: false,
+  scope: { likeType: 'comment' },
+})
+
+Like.addHook('afterFind', (findResult) => {
+  if (!Array.isArray(findResult)) {
+    // @ts-ignore
+    findResult = [findResult]
+  }
+  // @ts-ignore
+  for (const instance of findResult) {
+    if (instance.commentableType === 'post' && instance.image !== undefined) {
+      instance.like = instance.post
+    } else if (
+      instance.commentableType === 'comment' &&
+      instance.video !== undefined
+    ) {
+      instance.like = instance.comment
+    }
+    // To prevent mistakes:
+    delete instance.post
+    delete instance.dataValues.post
+    delete instance.comment
+    delete instance.dataValues.comment
+  }
+})
+
+export { User, Post, Comment, Like }
