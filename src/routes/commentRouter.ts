@@ -1,10 +1,11 @@
-import { Router } from 'express'
 import CommentController from '@controllers/commentController'
+import { Router } from 'express'
 
 const router = Router()
 const commentController = new CommentController()
 
-router.post('/:PostId', commentController.createComment)
+router.post('/', commentController.createComment)
 router.put('/:id', commentController.updateComment)
+router.post('/:id/like', commentController.likeComment)
 
 export default router

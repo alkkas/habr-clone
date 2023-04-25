@@ -1,10 +1,5 @@
-import {
-  DataTypes,
-  Model,
-  HasManyGetAssociationsMixin,
-  HasManyAddAssociationMixin,
-  HasManyCreateAssociationMixin,
-} from 'sequelize'
+import { DataTypes, Model } from 'sequelize'
+import ModelWithLikes from 'types'
 import sequelize from '../db'
 
 class User extends Model {
@@ -38,15 +33,11 @@ User.init(
   { sequelize, modelName: 'User' }
 )
 
-class Post extends Model {
+class Post extends ModelWithLikes {
   declare id: string
   declare content: JSON
   declare likesCount: number
   declare dislikesCount: number
-
-  declare addLike: HasManyAddAssociationMixin<Like, number>
-  declare getLikes: HasManyGetAssociationsMixin<Like>
-  declare createLike: HasManyCreateAssociationMixin<Like, 'UserId'>
 }
 Post.init(
   {
@@ -59,7 +50,7 @@ Post.init(
       type: DataTypes.STRING,
     },
     content: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
     },
     likesCount: {
       type: DataTypes.INTEGER,
@@ -71,12 +62,13 @@ Post.init(
   { sequelize, modelName: 'Post' }
 )
 
-class Comment extends Model {
+class Comment extends ModelWithLikes {
   declare id: string
   declare content: string
-  declare likes: number
-  declare dislikes: number
+  declare likesCount: number
+  declare dislikesCount: number
 }
+
 Comment.init(
   {
     id: {
